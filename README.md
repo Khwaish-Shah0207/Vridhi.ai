@@ -1,6 +1,6 @@
 # Vridhi.ai — Predictive Credit Risk Analytics Platform for MSMEs
 
-**Smart India Hackathon — PS 12: Predictive Credit Risk Analytics for MSMEs**
+**Smart India Hackathon — PS 12: Predictive Credit Risk Analytics for MSMEs**  
 
 Vridhi.ai is an interactive analytics dashboard that evaluates and visualizes predictive credit-risk models for Micro, Small, and Medium Enterprises using alternative data sources instead of relying solely on traditional credit scores.
 
