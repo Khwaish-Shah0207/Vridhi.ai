@@ -5,7 +5,7 @@ import { createContext, useContext, useState, useCallback } from "react";
 const AssessmentContext = createContext(null);
 
 export function AssessmentProvider({ children }) {
-  const [prediction, setPrediction] = useState(null);
+  const [prediction, setPrediction] = useState(null); 
   const [formData, setFormData] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
