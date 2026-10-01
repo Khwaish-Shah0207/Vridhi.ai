@@ -45,5 +45,3 @@ env/
 
 # Generated files
 coverage/
-# Trained model
-backend/model/vridhi_multidataset_model.pkl
