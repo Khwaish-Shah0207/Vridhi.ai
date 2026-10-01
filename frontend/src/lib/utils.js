@@ -1,10 +1,10 @@
 export function formatCurrency(value) {
   if (value === null || value === undefined) return "N/A";
   const num = Number(value);
-  if (num >= 10000000) return `\u20b9${(num / 10000000).toFixed(2)} Cr`;
-  if (num >= 100000) return `\u20b9${(num / 100000).toFixed(2)} L`;
-  if (num >= 1000) return `\u20b9${(num / 1000).toFixed(1)}K`;
-  return `\u20b9${num.toFixed(0)}`;
+  if (num >= 10000000) return `₹${(num / 10000000).toFixed(2)} Cr`;
+  if (num >= 100000) return `₹${(num / 100000).toFixed(2)} L`;
+  if (num >= 1000) return `₹${(num / 1000).toFixed(1)}K`;
+  return `₹${num.toFixed(0)}`;
 }
 
 export function formatNumber(value, decimals = 1) {
@@ -18,13 +18,13 @@ export function formatPercent(value, decimals = 1) {
 }
 
 export function getRiskColor(label) {
-  if (label === "LOW") return "#10b981";
-  if (label === "MEDIUM") return "#f59e0b";
-  return "#ef4444";
+  if (label === "LOW") return "#34d399";
+  if (label === "MEDIUM") return "#fbbf24";
+  return "#fb7185";
 }
 
 export function getRiskBg(label) {
-  if (label === "LOW") return "bg-emerald-100 text-emerald-700 border-emerald-200";
-  if (label === "MEDIUM") return "bg-amber-100 text-amber-700 border-amber-200";
-  return "bg-red-100 text-red-700 border-red-200";
+  if (label === "LOW") return "bg-emerald-400/10 text-emerald-300 border-emerald-400/20";
+  if (label === "MEDIUM") return "bg-amber-400/10 text-amber-300 border-amber-400/20";
+  return "bg-rose-400/10 text-rose-300 border-rose-400/20";
 }

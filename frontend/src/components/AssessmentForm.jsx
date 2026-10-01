@@ -18,13 +18,25 @@ const DEFAULTS = {
   utility_delay_days: 5,
   vendor_trust_score: 75,
   sector_type: "Manufacturing",
-  afhi_score: 70,
   owner_gender: "Male",
   region: "South",
   business_size: "Small",
   years_in_operation: 8,
   employee_count: 25,
-  revenue_history: [400000, 420000, 410000, 450000, 470000, 460000, 480000, 490000, 475000, 500000, 510000, 520000],
+  revenue_history: [
+    400000,
+    420000,
+    410000,
+    450000,
+    470000,
+    460000,
+    480000,
+    490000,
+    475000,
+    500000,
+    510000,
+    520000,
+  ],
 };
 
 function Field({ label, children, hint, modelInput }) {
@@ -33,11 +45,19 @@ function Field({ label, children, hint, modelInput }) {
       <label className="block text-sm font-medium text-slate-700 mb-1">
         {label}
         {modelInput && (
-          <span className="ml-2 text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">MODEL INPUT</span>
+          <span className="ml-2 text-xs text-blue-600 bg-blue-50 px-1.5 py-0.5 rounded">
+            MODEL INPUT
+          </span>
         )}
       </label>
+
       {children}
-      {hint && <p className="mt-1 text-xs text-slate-400">{hint}</p>}
+
+      {hint && (
+        <p className="mt-1 text-xs text-slate-400">
+          {hint}
+        </p>
+      )}
     </div>
   );
 }
@@ -46,26 +66,103 @@ const inputClass =
   "w-full border border-slate-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent";
 
 export default function AssessmentForm() {
-  const { submitPrediction, setLoading, setError, loading, error } = useAssessment();
-  const [form, setForm] = useState(DEFAULTS);
-  const [revText, setRevText] = useState(DEFAULTS.revenue_history.join(", "));
+  const {
+    submitPrediction,
+    setLoading,
+    setError,
+    loading,
+    error,
+  } = useAssessment();
 
-  const update = (key, val) => setForm((prev) => ({ ...prev, [key]: val }));
+  const [form, setForm] = useState(DEFAULTS);
+
+  const [revText, setRevText] = useState(
+    DEFAULTS.revenue_history.join(", ")
+  );
+
+  const update = (key, val) => {
+    setForm((prev) => ({
+      ...prev,
+      [key]: val,
+    }));
+  };
+
+  /*
+   * AFHI CALCULATION
+   *
+   * Original formula:
+   *
+   * AFHI =
+   * (GST Compliance / (Utility Delays + 1))
+   * × log10(Digital Volume)
+   * × Vendor Trust
+   *
+   * The raw value can be much greater than 100,
+   * so it is normalized to the range 1–100.
+   */
+  const calculateAFHI = () => {
+    const gst = Number(form.gst_compliance_rate) || 0;
+    const utilityDelays = Number(form.utility_delay_days) || 0;
+    const digitalVolume = Number(form.monthly_upi_volume) || 0;
+    const vendorTrust = Number(form.vendor_trust_score) || 0;
+
+    if (
+      digitalVolume <= 0 ||
+      gst <= 0 ||
+      vendorTrust <= 0
+    ) {
+      return 1;
+    }
+
+    // Original AFHI formula
+    const rawAFHI =
+      (gst / (utilityDelays + 1)) *
+      Math.log10(digitalVolume) *
+      vendorTrust;
+
+    // Normalize raw AFHI to 1–100
+    const normalizedAFHI =
+      (100 * rawAFHI) / (rawAFHI + 100);
+
+    // Guarantee the final value stays between 1 and 100
+    return Number(
+      Math.min(100, Math.max(1, normalizedAFHI)).toFixed(2)
+    );
+  };
+
+  // Automatically recalculated whenever form values change
+  const afhiScore = calculateAFHI();
 
   const handleSubmit = async (e) => {
     e.preventDefault();
+
     setLoading(true);
     setError(null);
 
     let revHistory = [];
+
     try {
-      revHistory = revText.split(",").map((v) => parseFloat(v.trim())).filter((v) => !isNaN(v));
+      revHistory = revText
+        .split(",")
+        .map((v) => parseFloat(v.trim()))
+        .filter((v) => !isNaN(v));
     } catch {
       revHistory = [];
     }
 
-    const payload = { ...form, revenue_history: revHistory };
+    /*
+     * AFHI is NOT manually entered anymore.
+     * The calculated AFHI is added to the payload
+     * sent to the backend.
+     */
+    const payload = {
+      ...form,
+      afhi_score: afhiScore,
+      revenue_history: revHistory,
+    };
+
     const result = await api.predict(payload);
+
     setLoading(false);
 
     if (result.error) {
@@ -85,81 +182,277 @@ export default function AssessmentForm() {
 
       {/* Model Inputs */}
       <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-lg font-bold text-slate-800 mb-1">Model Inputs</h2>
-        <p className="text-sm text-slate-500 mb-5">These 8 features are used by the XGBoost model for credit-risk prediction.</p>
+        <h2 className="text-lg font-bold text-slate-800 mb-1">
+          Model Inputs
+        </h2>
+
+        <p className="text-sm text-slate-500 mb-5">
+          These 8 features are used by the XGBoost model for
+          credit-risk prediction.
+        </p>
+
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
           <Field label="Business Name" modelInput={false}>
             <input
               className={inputClass}
               value={form.business_name}
-              onChange={(e) => update("business_name", e.target.value)}
+              onChange={(e) =>
+                update("business_name", e.target.value)
+              }
               placeholder="e.g. Sri Balaji Enterprises"
             />
           </Field>
+
           <Field label="Sector Type" modelInput>
-            <select className={inputClass} value={form.sector_type} onChange={(e) => update("sector_type", e.target.value)}>
+            <select
+              className={inputClass}
+              value={form.sector_type}
+              onChange={(e) =>
+                update("sector_type", e.target.value)
+              }
+            >
               {SECTORS.map((s) => (
-                <option key={s} value={s}>{s}</option>
+                <option key={s} value={s}>
+                  {s}
+                </option>
               ))}
             </select>
           </Field>
-          <Field label="Annual Income (INR)" modelInput hint="Annual business income">
-            <input type="number" className={inputClass} value={form.income} onChange={(e) => update("income", +e.target.value)} step={100000} min={0} />
+
+          <Field
+            label="Annual Income (INR)"
+            modelInput
+            hint="Annual business income"
+          >
+            <input
+              type="number"
+              className={inputClass}
+              value={form.income}
+              onChange={(e) =>
+                update("income", +e.target.value)
+              }
+              step={100000}
+              min={0}
+            />
           </Field>
-          <Field label="Loan Amount (INR)" modelInput hint="Requested loan amount">
-            <input type="number" className={inputClass} value={form.loan_amount} onChange={(e) => update("loan_amount", +e.target.value)} step={50000} min={0} />
+
+          <Field
+            label="Loan Amount (INR)"
+            modelInput
+            hint="Requested loan amount"
+          >
+            <input
+              type="number"
+              className={inputClass}
+              value={form.loan_amount}
+              onChange={(e) =>
+                update("loan_amount", +e.target.value)
+              }
+              step={50000}
+              min={0}
+            />
           </Field>
-          <Field label="GST Compliance Rate (%)" modelInput hint="0-100">
-            <input type="number" className={inputClass} value={form.gst_compliance_rate} onChange={(e) => update("gst_compliance_rate", +e.target.value)} step={1} min={0} max={100} />
+
+          <Field
+            label="GST Compliance Rate (%)"
+            modelInput
+            hint="0-100"
+          >
+            <input
+              type="number"
+              className={inputClass}
+              value={form.gst_compliance_rate}
+              onChange={(e) =>
+                update(
+                  "gst_compliance_rate",
+                  +e.target.value
+                )
+              }
+              step={1}
+              min={0}
+              max={100}
+            />
           </Field>
-          <Field label="Monthly UPI Volume (INR)" modelInput hint="Monthly UPI transaction volume">
-            <input type="number" className={inputClass} value={form.monthly_upi_volume} onChange={(e) => update("monthly_upi_volume", +e.target.value)} step={10000} min={0} />
+
+          <Field
+            label="Monthly UPI Volume (INR)"
+            modelInput
+            hint="Monthly UPI transaction volume"
+          >
+            <input
+              type="number"
+              className={inputClass}
+              value={form.monthly_upi_volume}
+              onChange={(e) =>
+                update(
+                  "monthly_upi_volume",
+                  +e.target.value
+                )
+              }
+              step={10000}
+              min={0}
+            />
           </Field>
-          <Field label="Utility Delay Days" modelInput hint="Average delay in utility bill payments">
-            <input type="number" className={inputClass} value={form.utility_delay_days} onChange={(e) => update("utility_delay_days", +e.target.value)} step={1} min={0} />
+
+          <Field
+            label="Utility Delay Days"
+            modelInput
+            hint="Average delay in utility bill payments"
+          >
+            <input
+              type="number"
+              className={inputClass}
+              value={form.utility_delay_days}
+              onChange={(e) =>
+                update(
+                  "utility_delay_days",
+                  +e.target.value
+                )
+              }
+              step={1}
+              min={0}
+            />
           </Field>
-          <Field label="Vendor Trust Score" modelInput hint="0-100">
-            <input type="number" className={inputClass} value={form.vendor_trust_score} onChange={(e) => update("vendor_trust_score", +e.target.value)} step={1} min={0} max={100} />
+
+          <Field
+            label="Vendor Trust Score"
+            modelInput
+            hint="0-100"
+          >
+            <input
+              type="number"
+              className={inputClass}
+              value={form.vendor_trust_score}
+              onChange={(e) =>
+                update(
+                  "vendor_trust_score",
+                  +e.target.value
+                )
+              }
+              step={1}
+              min={0}
+              max={100}
+            />
           </Field>
-          <Field label="AFHI Score" modelInput hint="Alternative Financial Health Index (0-100)">
-            <input type="number" className={inputClass} value={form.afhi_score} onChange={(e) => update("afhi_score", +e.target.value)} step={1} min={0} max={100} />
+
+          {/* AUTO-CALCULATED AFHI */}
+          <Field
+            label="AFHI Score"
+            modelInput
+            hint="Automatically calculated from GST compliance, utility delays, digital volume, and vendor trust"
+          >
+            <input
+              type="number"
+              className={inputClass}
+              value={afhiScore}
+              readOnly
+            />
           </Field>
         </div>
       </div>
 
       {/* Metadata / Audit Inputs */}
       <div className="bg-white rounded-xl border border-slate-200 p-6">
-        <h2 className="text-lg font-bold text-slate-800 mb-1">Metadata &amp; Audit Inputs</h2>
-        <p className="text-sm text-slate-500 mb-5">These fields are used for display, segmentation, fairness analysis, and forecasting — NOT as model inputs.</p>
+        <h2 className="text-lg font-bold text-slate-800 mb-1">
+          Metadata &amp; Audit Inputs
+        </h2>
+
+        <p className="text-sm text-slate-500 mb-5">
+          These fields are used for display, segmentation,
+          fairness analysis, and forecasting — NOT as model inputs.
+        </p>
+
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
           <Field label="Owner Gender">
-            <select className={inputClass} value={form.owner_gender} onChange={(e) => update("owner_gender", e.target.value)}>
-              {GENDERS.map((g) => <option key={g} value={g}>{g}</option>)}
+            <select
+              className={inputClass}
+              value={form.owner_gender}
+              onChange={(e) =>
+                update("owner_gender", e.target.value)
+              }
+            >
+              {GENDERS.map((g) => (
+                <option key={g} value={g}>
+                  {g}
+                </option>
+              ))}
             </select>
           </Field>
+
           <Field label="Region">
-            <select className={inputClass} value={form.region} onChange={(e) => update("region", e.target.value)}>
-              {REGIONS.map((r) => <option key={r} value={r}>{r}</option>)}
+            <select
+              className={inputClass}
+              value={form.region}
+              onChange={(e) =>
+                update("region", e.target.value)
+              }
+            >
+              {REGIONS.map((r) => (
+                <option key={r} value={r}>
+                  {r}
+                </option>
+              ))}
             </select>
           </Field>
+
           <Field label="Business Size">
-            <select className={inputClass} value={form.business_size} onChange={(e) => update("business_size", e.target.value)}>
-              {SIZES.map((s) => <option key={s} value={s}>{s}</option>)}
+            <select
+              className={inputClass}
+              value={form.business_size}
+              onChange={(e) =>
+                update("business_size", e.target.value)
+              }
+            >
+              {SIZES.map((s) => (
+                <option key={s} value={s}>
+                  {s}
+                </option>
+              ))}
             </select>
           </Field>
+
           <Field label="Years in Operation">
-            <input type="number" className={inputClass} value={form.years_in_operation} onChange={(e) => update("years_in_operation", +e.target.value)} min={0} />
+            <input
+              type="number"
+              className={inputClass}
+              value={form.years_in_operation}
+              onChange={(e) =>
+                update(
+                  "years_in_operation",
+                  +e.target.value
+                )
+              }
+              min={0}
+            />
           </Field>
+
           <Field label="Employee Count">
-            <input type="number" className={inputClass} value={form.employee_count} onChange={(e) => update("employee_count", +e.target.value)} min={0} />
+            <input
+              type="number"
+              className={inputClass}
+              value={form.employee_count}
+              onChange={(e) =>
+                update(
+                  "employee_count",
+                  +e.target.value
+                )
+              }
+              min={0}
+            />
           </Field>
         </div>
+
         <div className="mt-4">
-          <Field label="Revenue History (last 6-12 months, comma-separated)" hint="Used for cash-flow forecasting">
+          <Field
+            label="Revenue History (last 6-12 months, comma-separated)"
+            hint="Used for cash-flow forecasting"
+          >
             <textarea
               className={inputClass + " h-20 resize-none"}
               value={revText}
-              onChange={(e) => setRevText(e.target.value)}
+              onChange={(e) =>
+                setRevText(e.target.value)
+              }
               placeholder="e.g. 400000, 420000, 410000, 450000, 470000, 460000"
             />
           </Field>

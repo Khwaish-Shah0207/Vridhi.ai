@@ -1,7 +1,14 @@
 "use client";
 
-import { AssessmentProvider } from "../context/AssessmentContext";
+import { AssessmentProvider } from "./AssessmentContext";
+import { AuthProvider } from "./AuthContext";
 
 export function Providers({ children }) {
-  return <AssessmentProvider>{children}</AssessmentProvider>;
+  return (
+    <AuthProvider>
+      <AssessmentProvider>
+        {children}
+      </AssessmentProvider>
+    </AuthProvider>
+  );
 }
