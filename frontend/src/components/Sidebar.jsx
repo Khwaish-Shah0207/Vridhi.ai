@@ -16,37 +16,93 @@ import {
   ChevronRight,
 } from "lucide-react";
 
-const navItems = [
-  { href: "/assess", label: "Assessment", icon: FileSearch },
-  { href: "/dashboard", label: "Risk Dashboard", icon: LayoutDashboard },
-  { href: "/portfolio", label: "Portfolio", icon: Users },
-  { href: "/simulator", label: "Simulator", icon: SlidersHorizontal },
-  { href: "/fairness", label: "Fairness", icon: Scale },
-  { href: "/batch", label: "Batch Scoring", icon: Upload },
+import { useAuth } from "../context/AuthContext";
+
+const commonItems = [
+  {
+    href: "/assess",
+    label: "Assessment",
+    icon: FileSearch,
+  },
+  {
+    href: "/dashboard",
+    label: "Risk Dashboard",
+    icon: LayoutDashboard,
+  },
+];
+
+const msmeItems = [
+  {
+    href: "/simulator",
+    label: "Simulator",
+    icon: SlidersHorizontal,
+  },
+];
+
+const lenderItems = [
+  {
+    href: "/portfolio",
+    label: "Portfolio",
+    icon: Users,
+  },
+  {
+    href: "/fairness",
+    label: "Fairness",
+    icon: Scale,
+  },
+  {
+    href: "/batch",
+    label: "Batch Scoring",
+    icon: Upload,
+  },
 ];
 
 export default function Sidebar() {
   const pathname = usePathname();
   const [open, setOpen] = useState(false);
 
+  const { role } = useAuth();
+
+  const navItems =
+    role === "Lending Officer"
+      ? [...commonItems, ...lenderItems]
+      : [...commonItems, ...msmeItems];
+
   return (
     <>
       <header className="fixed top-0 left-0 right-0 z-50 h-16 border-b border-white/10 bg-black/45 backdrop-blur-xl">
         <div className="max-w-7xl mx-auto h-full px-5 md:px-7 flex items-center justify-between">
-          <Link href="/" onClick={() => setOpen(false)} className="flex items-center gap-3">
+
+          {/* LOGO */}
+          <Link
+            href="/"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-3"
+          >
             <div className="w-9 h-9 rounded-xl bg-white text-black flex items-center justify-center shadow-[0_0_30px_rgba(0,210,255,.12)]">
               <TrendingUp className="w-5 h-5" />
             </div>
+
             <div className="hidden sm:block">
-              <div className="font-bold text-white tracking-tight leading-none">Vridhi.ai</div>
-              <div className="text-[10px] text-white/40 mt-1 uppercase tracking-[.18em]">Credit Intelligence</div>
+              <div className="font-bold text-white tracking-tight leading-none">
+                Vridhi.ai
+              </div>
+
+              <div className="text-[10px] text-white/40 mt-1 uppercase tracking-[.18em]">
+                Credit Intelligence
+              </div>
             </div>
           </Link>
 
+          {/* DESKTOP NAV */}
           <nav className="hidden lg:flex items-center gap-1">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href;
+
+              const active =
+                pathname === item.href ||
+                pathname.startsWith(`${item.href}/`);
+
               return (
                 <Link
                   key={item.href}
@@ -64,38 +120,64 @@ export default function Sidebar() {
             })}
           </nav>
 
+          {/* MOBILE MENU */}
           <button
             onClick={() => setOpen(!open)}
             className="lg:hidden w-10 h-10 rounded-full border border-white/10 bg-white/[.05] flex items-center justify-center text-white"
             aria-label="Toggle navigation"
           >
-            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {open ? (
+              <X className="w-5 h-5" />
+            ) : (
+              <Menu className="w-5 h-5" />
+            )}
           </button>
 
+          {/* STATUS */}
           <div className="hidden lg:flex items-center gap-2">
-            <span className="text-[11px] text-white/35">MSME CREDIT RISK</span>
+            <span className="text-[11px] text-white/35">
+              {role === "Lending Officer"
+                ? "LENDING INTELLIGENCE"
+                : "MSME CREDIT RISK"}
+            </span>
+
             <span className="w-2 h-2 rounded-full bg-emerald-400 shadow-[0_0_12px_rgba(52,211,153,.8)]" />
           </div>
         </div>
       </header>
 
+      {/* MOBILE NAV */}
       {open && (
         <>
-          <div className="lg:hidden fixed inset-0 top-16 z-40 bg-black/70 backdrop-blur-sm" onClick={() => setOpen(false)} />
+          <div
+            className="lg:hidden fixed inset-0 top-16 z-40 bg-black/70 backdrop-blur-sm"
+            onClick={() => setOpen(false)}
+          />
+
           <div className="lg:hidden fixed top-16 left-0 right-0 z-50 border-b border-white/10 bg-[#0d0e10]/95 backdrop-blur-2xl p-3">
             {navItems.map((item) => {
               const Icon = item.icon;
-              const active = pathname === item.href;
+
+              const active =
+                pathname === item.href ||
+                pathname.startsWith(`${item.href}/`);
+
               return (
                 <Link
                   key={item.href}
                   href={item.href}
                   onClick={() => setOpen(false)}
                   className={`flex items-center justify-between px-4 py-3 rounded-xl text-sm mb-1 ${
-                    active ? "bg-white text-black" : "text-white/65 hover:bg-white/[.06] hover:text-white"
+                    active
+                      ? "bg-white text-black"
+                      : "text-white/65 hover:bg-white/[.06] hover:text-white"
                   }`}
                 >
-                  <span className="flex items-center gap-3"><Icon className="w-4 h-4" />{item.label}</span>
+                  <span className="flex items-center gap-3">
+                    <Icon className="w-4 h-4" />
+                    {item.label}
+                  </span>
+
                   <ChevronRight className="w-4 h-4 opacity-40" />
                 </Link>
               );

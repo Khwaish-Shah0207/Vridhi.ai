@@ -13,14 +13,20 @@ export function AuthProvider({ children }) {
   const router = useRouter();
 
   useEffect(() => {
-    // Restore session from localStorage if present
     try {
       const savedUser = localStorage.getItem("vridhi_user");
       const savedRole = localStorage.getItem("vridhi_role");
+
       if (savedUser) {
-        setUser(JSON.parse(savedUser));
+        const parsedUser = JSON.parse(savedUser);
+        setUser(parsedUser);
         setIsAuthenticated(true);
+
+        if (parsedUser.role) {
+          setRoleState(parsedUser.role);
+        }
       }
+
       if (savedRole) {
         setRoleState(savedRole);
       }
@@ -32,22 +38,46 @@ export function AuthProvider({ children }) {
   }, []);
 
   const login = (userData) => {
-    const selectedRole = userData.role || role || "MSME Borrower";
+    const selectedRole =
+      userData.role || role || "MSME Borrower";
+
     const userObj = {
-      name: userData.name || (selectedRole === "MSME Borrower" ? "Rajesh Sharma" : "Priya Mehta"),
-      email: userData.email || "user@vridhi.ai",
+      name:
+        userData.name ||
+        (selectedRole === "MSME Borrower"
+          ? "Rajesh Sharma"
+          : "Priya Mehta"),
+
+      email:
+        userData.email || "user@vridhi.ai",
+
       role: selectedRole,
-      organization: userData.organization || (selectedRole === "MSME Borrower" ? "Sharma Enterprises" : "HDFC Bank MSME Desk"),
+
+      organization:
+        userData.organization ||
+        (selectedRole === "MSME Borrower"
+          ? "Sharma Enterprises"
+          : "HDFC Bank MSME Desk"),
     };
+
     setUser(userObj);
     setRoleState(selectedRole);
     setIsAuthenticated(true);
+
     try {
-      localStorage.setItem("vridhi_user", JSON.stringify(userObj));
-      localStorage.setItem("vridhi_role", selectedRole);
+      localStorage.setItem(
+        "vridhi_user",
+        JSON.stringify(userObj)
+      );
+
+      localStorage.setItem(
+        "vridhi_role",
+        selectedRole
+      );
     } catch (e) {
       console.error("Failed to save session", e);
     }
+
     return userObj;
   };
 
@@ -58,17 +88,20 @@ export function AuthProvider({ children }) {
   const logout = () => {
     setUser(null);
     setIsAuthenticated(false);
+
     try {
       localStorage.removeItem("vridhi_user");
       localStorage.removeItem("vridhi_role");
     } catch (e) {
       console.error("Failed to clear session", e);
     }
+
     router.push("/");
   };
 
   const setRole = (newRole) => {
     setRoleState(newRole);
+
     try {
       localStorage.setItem("vridhi_role", newRole);
     } catch (e) {
@@ -96,9 +129,12 @@ export function AuthProvider({ children }) {
 
 export function useAuth() {
   const ctx = useContext(AuthContext);
+
   if (!ctx) {
-    throw new Error("useAuth must be used within AuthProvider");
+    throw new Error(
+      "useAuth must be used within AuthProvider"
+    );
   }
+
   return ctx;
 }
-
